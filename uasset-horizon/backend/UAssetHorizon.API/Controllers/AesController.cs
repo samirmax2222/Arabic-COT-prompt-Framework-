@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using UAssetHorizon.API.Security;
 using UAssetHorizon.Core.AES;
 using UAssetHorizon.Core.Decryption;
 using UAssetHorizon.Core.Models;
@@ -12,12 +13,15 @@ public class AesController : ControllerBase
     private readonly AesKeyScanner _scanner;
     private readonly AesKeyDatabase _keyDb;
     private readonly PakDecryptor _decryptor;
+    private readonly PathSanitizer _pathSanitizer;
 
-    public AesController(AesKeyScanner scanner, AesKeyDatabase keyDb, PakDecryptor decryptor)
+    public AesController(AesKeyScanner scanner, AesKeyDatabase keyDb,
+        PakDecryptor decryptor, PathSanitizer pathSanitizer)
     {
         _scanner = scanner;
         _keyDb = keyDb;
         _decryptor = decryptor;
+        _pathSanitizer = pathSanitizer;
     }
 
     /// <summary>
@@ -26,13 +30,14 @@ public class AesController : ControllerBase
     [HttpPost("scan")]
     public async Task<IActionResult> Scan([FromBody] ScanRequest request)
     {
-        if (string.IsNullOrEmpty(request.FilePath))
-            return BadRequest(new { error = "filePath is required" });
+        var (safePath, error) = _pathSanitizer.Validate(request.FilePath);
+        if (safePath is null)
+            return BadRequest(new { error });
 
-        if (!System.IO.File.Exists(request.FilePath))
-            return NotFound(new { error = $"File not found: {request.FilePath}" });
+        if (!System.IO.File.Exists(safePath))
+            return NotFound(new { error = $"File not found: {safePath}" });
 
-        var result = await _scanner.ScanFileAsync(request.FilePath);
+        var result = await _scanner.ScanFileAsync(safePath);
         return Ok(result);
     }
 
@@ -42,11 +47,15 @@ public class AesController : ControllerBase
     [HttpPost("validate")]
     public IActionResult Validate([FromBody] ValidateRequest request)
     {
-        if (string.IsNullOrEmpty(request.PakPath) || string.IsNullOrEmpty(request.KeyHex))
+        if (string.IsNullOrEmpty(request.KeyHex))
             return BadRequest(new { error = "pakPath and keyHex are required" });
 
-        bool valid = _scanner.ValidateKeyAgainstPak(request.PakPath, request.KeyHex);
-        return Ok(new { valid, pakPath = request.PakPath });
+        var (safePath, error) = _pathSanitizer.Validate(request.PakPath);
+        if (safePath is null)
+            return BadRequest(new { error });
+
+        bool valid = _scanner.ValidateKeyAgainstPak(safePath, request.KeyHex);
+        return Ok(new { valid, pakPath = safePath });
     }
 
     /// <summary>
@@ -55,14 +64,23 @@ public class AesController : ControllerBase
     [HttpPost("decrypt")]
     public async Task<IActionResult> Decrypt([FromBody] DecryptRequest request)
     {
-        if (string.IsNullOrEmpty(request.PakPath) || string.IsNullOrEmpty(request.KeyHex))
+        if (string.IsNullOrEmpty(request.KeyHex))
             return BadRequest(new { error = "pakPath and keyHex are required" });
 
-        string outputDir = request.OutputDir ?? Path.Combine(
-            Path.GetDirectoryName(request.PakPath) ?? ".",
-            Path.GetFileNameWithoutExtension(request.PakPath) + "_extracted");
+        var (safePakPath, pakError) = _pathSanitizer.Validate(request.PakPath);
+        if (safePakPath is null)
+            return BadRequest(new { error = pakError });
 
-        var result = await _decryptor.DecryptPakAsync(request.PakPath, request.KeyHex, outputDir);
+        string outputDir = request.OutputDir ?? Path.Combine(
+            Path.GetDirectoryName(safePakPath) ?? ".",
+            Path.GetFileNameWithoutExtension(safePakPath) + "_extracted");
+
+        // Validate the output directory is also within the allowed base
+        var (safeOutputDir, outError) = _pathSanitizer.Validate(outputDir);
+        if (safeOutputDir is null)
+            return BadRequest(new { error = outError });
+
+        var result = await _decryptor.DecryptPakAsync(safePakPath, request.KeyHex, safeOutputDir);
         return Ok(result);
     }
 

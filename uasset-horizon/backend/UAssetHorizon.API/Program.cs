@@ -1,3 +1,4 @@
+using UAssetHorizon.API.Security;
 using UAssetHorizon.Core.AES;
 using UAssetHorizon.Core.Decryption;
 using UAssetHorizon.Core.Parsers;
@@ -12,13 +13,19 @@ builder.Services.AddSingleton<UniversalAssetParser>();
 builder.Services.AddSingleton<AesKeyScanner>();
 builder.Services.AddSingleton<AesKeyDatabase>();
 builder.Services.AddSingleton<PakDecryptor>();
+builder.Services.AddSingleton<PathSanitizer>();
 
-// CORS for Electron frontend
+// CORS scoped to the Electron app and the local Vite dev server.
+// Electron file:// pages send "Origin: null", so we also allow that.
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins(
+                  "http://localhost:5173",  // Vite dev server
+                  "http://127.0.0.1:5173",
+                  "null"                    // Electron file:// origin
+              )
               .AllowAnyMethod()
               .AllowAnyHeader();
     });

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using UAssetHorizon.API.Security;
 using UAssetHorizon.Core.Parsers;
 
 namespace UAssetHorizon.API.Controllers;
@@ -8,10 +9,12 @@ namespace UAssetHorizon.API.Controllers;
 public class AssetController : ControllerBase
 {
     private readonly UniversalAssetParser _parser;
+    private readonly PathSanitizer _pathSanitizer;
 
-    public AssetController(UniversalAssetParser parser)
+    public AssetController(UniversalAssetParser parser, PathSanitizer pathSanitizer)
     {
         _parser = parser;
+        _pathSanitizer = pathSanitizer;
     }
 
     /// <summary>
@@ -20,13 +23,24 @@ public class AssetController : ControllerBase
     [HttpPost("parse")]
     public IActionResult Parse([FromBody] ParseRequest request)
     {
-        if (string.IsNullOrEmpty(request.FilePath))
-            return BadRequest(new { error = "filePath is required" });
+        var (safePath, error) = _pathSanitizer.Validate(request.FilePath);
+        if (safePath is null)
+            return BadRequest(new { error });
 
-        if (!System.IO.File.Exists(request.FilePath))
-            return NotFound(new { error = $"File not found: {request.FilePath}" });
+        if (!System.IO.File.Exists(safePath))
+            return NotFound(new { error = $"File not found: {safePath}" });
 
-        var result = _parser.Parse(request.FilePath, request.UexpPath);
+        // Also validate optional uexp companion path
+        string? safeUexpPath = null;
+        if (!string.IsNullOrEmpty(request.UexpPath))
+        {
+            var (uexp, uexpErr) = _pathSanitizer.Validate(request.UexpPath);
+            if (uexp is null)
+                return BadRequest(new { error = uexpErr });
+            safeUexpPath = uexp;
+        }
+
+        var result = _parser.Parse(safePath, safeUexpPath);
         return Ok(result);
     }
 
@@ -36,10 +50,11 @@ public class AssetController : ControllerBase
     [HttpPost("detect-version")]
     public IActionResult DetectVersion([FromBody] ParseRequest request)
     {
-        if (string.IsNullOrEmpty(request.FilePath))
-            return BadRequest(new { error = "filePath is required" });
+        var (safePath, error) = _pathSanitizer.Validate(request.FilePath);
+        if (safePath is null)
+            return BadRequest(new { error });
 
-        var info = VersionDetector.DetectFromFile(request.FilePath);
+        var info = VersionDetector.DetectFromFile(safePath);
         return Ok(info);
     }
 
@@ -49,15 +64,16 @@ public class AssetController : ControllerBase
     [HttpPost("browse")]
     public IActionResult Browse([FromBody] BrowseRequest request)
     {
-        if (string.IsNullOrEmpty(request.DirectoryPath))
-            return BadRequest(new { error = "directoryPath is required" });
+        var (safePath, error) = _pathSanitizer.Validate(request.DirectoryPath);
+        if (safePath is null)
+            return BadRequest(new { error });
 
-        if (!Directory.Exists(request.DirectoryPath))
-            return NotFound(new { error = $"Directory not found: {request.DirectoryPath}" });
+        if (!Directory.Exists(safePath))
+            return NotFound(new { error = $"Directory not found: {safePath}" });
 
         var extensions = new[] { ".uasset", ".uexp", ".ubulk", ".umap", ".pak", ".ucas", ".utoc" };
 
-        var files = Directory.EnumerateFiles(request.DirectoryPath,
+        var files = Directory.EnumerateFiles(safePath,
                 "*.*", request.Recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)
             .Where(f => extensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
             .Select(f => new
