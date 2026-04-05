@@ -1,0 +1,228 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Global Styles ──────────────────────────────────────────────── */
+
+:root {
+  --ue-bg: #1a1a1a;
+  --ue-surface: #242424;
+  --ue-panel: #2a2a2a;
+  --ue-border: #3a3a3a;
+  --ue-hover: #404040;
+  --ue-text: #e0e0e0;
+  --ue-muted: #888888;
+  --ue-accent: #0078d4;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #404040 #1a1a1a;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #404040;
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #555555;
+}
+
+/* ─── React Flow Overrides ───────────────────────────────────────── */
+
+.react-flow {
+  background-color: #1e1e2e !important;
+}
+
+.react-flow__background {
+  background-color: #1e1e2e !important;
+}
+
+.react-flow__minimap {
+  background-color: #242424 !important;
+  border: 1px solid #3a3a3a !important;
+  border-radius: 8px !important;
+}
+
+.react-flow__controls {
+  background: #2a2a2a !important;
+  border: 1px solid #3a3a3a !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+.react-flow__controls-button {
+  background: #2a2a2a !important;
+  border-color: #3a3a3a !important;
+  fill: #e0e0e0 !important;
+}
+
+.react-flow__controls-button:hover {
+  background: #404040 !important;
+}
+
+/* Execution flow animation on edges */
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.animated-edge {
+  stroke-dasharray: 6 3;
+  animation: flowAnimation 2s linear infinite;
+}
+
+@keyframes flowAnimation {
+  0% { stroke-dashoffset: 24; }
+  100% { stroke-dashoffset: 0; }
+}
+
+/* ─── Blueprint Node Styles ──────────────────────────────────────── */
+
+.bp-node {
+  min-width: 200px;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  font-size: 12px;
+}
+
+.bp-node:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.bp-node.selected {
+  box-shadow: 0 0 0 2px #0078d4, 0 4px 20px rgba(0, 120, 212, 0.3);
+}
+
+.bp-node-header {
+  padding: 6px 12px;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bp-node-body {
+  background: #262630;
+  padding: 8px 0;
+}
+
+/* ─── Pin Styles ─────────────────────────────────────────────────── */
+
+.bp-pin {
+  display: flex;
+  align-items: center;
+  padding: 2px 12px;
+  gap: 6px;
+  font-size: 11px;
+  color: #cccccc;
+  min-height: 22px;
+}
+
+.bp-pin.output {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.bp-pin-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid;
+  flex-shrink: 0;
+  transition: transform 0.1s ease;
+}
+
+.bp-pin-dot:hover {
+  transform: scale(1.3);
+}
+
+.bp-pin-dot.exec {
+  border-radius: 2px;
+  width: 10px;
+  height: 12px;
+  clip-path: polygon(0 0, 70% 0, 100% 50%, 70% 100%, 0 100%);
+  border: none;
+}
+
+.bp-pin-dot.connected {
+  background: currentColor;
+}
+
+/* Pin type colors */
+.pin-exec { color: #ffffff; }
+.pin-boolean { color: #9c0000; }
+.pin-int { color: #1ca864; }
+.pin-float { color: #a8e650; }
+.pin-string { color: #f0a0f0; }
+.pin-vector { color: #ffc040; }
+.pin-rotator { color: #99ccff; }
+.pin-transform { color: #f08040; }
+.pin-object { color: #00a0f0; }
+.pin-class { color: #6040b0; }
+.pin-struct { color: #0088cc; }
+.pin-delegate { color: #f04040; }
+.pin-wildcard { color: #808080; }
+.pin-name { color: #b898de; }
+.pin-text { color: #f080a8; }
+.pin-color { color: #ff8000; }
+.pin-enum { color: #006464; }
+.pin-byte { color: #006464; }
+.pin-double { color: #94fc13; }
+.pin-int64 { color: #a8e6a8; }
+
+/* ─── Drag & Drop Zone ───────────────────────────────────────────── */
+
+.drop-zone {
+  border: 2px dashed #3a3a3a;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.drop-zone.active {
+  border-color: #0078d4;
+  background: rgba(0, 120, 212, 0.08);
+  box-shadow: 0 0 30px rgba(0, 120, 212, 0.15);
+}
+
+/* ─── Log Panel Colors ───────────────────────────────────────────── */
+
+.log-info { color: #e0e0e0; }
+.log-success { color: #4ade80; }
+.log-warning { color: #facc15; }
+.log-error { color: #f87171; }
+.log-debug { color: #888888; }
+
+/* ─── Tab Bar ────────────────────────────────────────────────────── */
+
+.tab-button {
+  @apply px-4 py-2 text-sm font-medium transition-all duration-150;
+  color: #888888;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-button:hover {
+  color: #cccccc;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.tab-button.active {
+  color: #e0e0e0;
+  border-bottom-color: #0078d4;
+  background: rgba(0, 120, 212, 0.08);
+}
